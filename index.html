@@ -46,7 +46,7 @@
             margin-bottom: 8px;
             font-size: 1.1em;
         }
-        input {
+        input[type="number"], input[type="date"] {
             width: 100%;
             padding: 14px;
             font-size: 16px;
@@ -61,6 +61,16 @@
             box-shadow: 0 0 8px rgba(116, 235, 213, 0.3);
             background: #fff;
             outline: none;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+        input[type="checkbox"] {
+            margin-right: 10px;
+            width: 20px;
+            height: 20px;
         }
         button {
             width: 100%;
@@ -138,6 +148,16 @@
             <label for="closing_date">Closing Date:</label>
             <input type="date" id="closing_date" required>
         </div>
+        <div class="form-group">
+            <div class="checkbox-group">
+                <input type="checkbox" id="survey_fee" name="survey_fee">
+                <label for="survey_fee">Include Survey Fee ($350)</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="hoa_estoppel" name="hoa_estoppel">
+                <label for="hoa_estoppel">Include HOA Estoppel ($400)</label>
+            </div>
+        </div>
         <button id="calculateBtn">Calculate Costs</button>
         <div class="result" id="result"></div>
     </div>
@@ -152,12 +172,14 @@
                     const agentCommission = parseFloat(document.getElementById('agent_commission').value);
                     const taxProration = parseFloat(document.getElementById('tax_proration').value);
                     const closingDateInput = document.getElementById('closing_date').value;
+                    const includeSurvey = document.getElementById('survey_fee').checked;
+                    const includeHOA = document.getElementById('hoa_estoppel').checked;
 
                     if (!propertyValue || propertyValue <= 0 || 
                         !agentCommission || agentCommission < 0 || 
                         !taxProration || taxProration < 0 || 
                         !closingDateInput) {
-                        document.getElementById('result').innerHTML = "<p>Please enter valid numbers for all fields.</p>";
+                        document.getElementById('result').innerHTML = "<p>Please enter valid numbers for all required fields.</p>";
                         return;
                     }
 
@@ -166,31 +188,51 @@
                     const dayOfYear = Math.ceil((closingDate - new Date(closingDate.getFullYear(), 0, 0)) / 86400000);
                     const proratedTaxes = (taxProration / yearDays) * (yearDays - dayOfYear);
 
-                    const baseRate = 0.005;
-                    const premium = propertyValue * baseRate;
+                    // Calculate tiered title insurance premium
+                    let premium = 0;
+                    if (propertyValue <= 100000) {
+                        premium = (propertyValue / 1000) * 5.75;
+                    } else if (propertyValue <= 1000000) {
+                        premium = (100000 / 1000) * 5.75 + ((propertyValue - 100000) / 1000) * 5.00;
+                    } else if (propertyValue <= 5000000) {
+                        premium = (100000 / 1000) * 5.75 + (900000 / 1000) * 5.00 + ((propertyValue - 1000000) / 1000) * 2.50;
+                    } else if (propertyValue <= 10000000) {
+                        premium = (100000 / 1000) * 5.75 + (900000 / 1000) * 5.00 + (4000000 / 1000) * 2.50 + ((propertyValue - 5000000) / 1000) * 2.25;
+                    } else {
+                        premium = (100000 / 1000) * 5.75 + (900000 / 1000) * 5.00 + (4000000 / 1000) * 2.50 + (5000000 / 1000) * 2.25 + ((propertyValue - 10000000) / 1000) * 2.00;
+                    }
+
                     const agentCost = (agentCommission / 100) * propertyValue;
                     const docStamps = propertyValue * 0.007;
                     const titleSearchFee = 75;
                     const cityLienSearch = 75;
                     const technologyFee = 90;
                     const closingFee = 500;
+                    const surveyFee = includeSurvey ? 350 : 0;
+                    const hoaEstoppelFee = includeHOA ? 400 : 0;
 
                     const totalCost = premium + agentCost + proratedTaxes + docStamps + 
-                                    titleSearchFee + cityLienSearch + technologyFee + closingFee;
+                                    titleSearchFee + cityLienSearch + technologyFee + closingFee +
+                                    surveyFee + hoaEstoppelFee;
                     const totalDueToSeller = propertyValue - totalCost;
 
+                    // Format numbers with commas
+                    const formatNumber = (num) => num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
                     document.getElementById('result').innerHTML = `
-                        <p><strong>Property Value:</strong> $${propertyValue.toFixed(2)}</p>
-                        <p><strong>Title Insurance Premium:</strong> $${premium.toFixed(2)}</p>
-                        <p><strong>Closing Fee:</strong> ~$500 (Varies by terms)</p>
-                        <p><strong>Agent Commission:</strong> $${agentCost.toFixed(2)}</p>
-                        <p><strong>Tax Proration:</strong> $${proratedTaxes.toFixed(2)}</p>
-                        <p><strong>Documentary Stamps:</strong> $${docStamps.toFixed(2)}</p>
-                        <p><strong>Title Search Fee:</strong> $${titleSearchFee.toFixed(2)}</p>
-                        <p><strong>City Lien Search:</strong> $${cityLienSearch.toFixed(2)}</p>
-                        <p><strong>Technology Fee:</strong> $${technologyFee.toFixed(2)}</p>
-                        <p><strong>Total Closing Costs:</strong> $${totalCost.toFixed(2)}</p>
-                        <p><strong>Total Due to Seller:</strong> $${totalDueToSeller.toFixed(2)}</p>
+                        <p><strong>Property Value:</strong> $${formatNumber(propertyValue)}</p>
+                        <p><strong>Title Insurance Premium:</strong> $${formatNumber(premium)}</p>
+                        <p><strong>Closing Fee:</strong> ~$${formatNumber(closingFee)} (Varies by terms)</p>
+                        <p><strong>Agent Commission:</strong> $${formatNumber(agentCost)}</p>
+                        <p><strong>Tax Proration:</strong> $${formatNumber(proratedTaxes)}</p>
+                        <p><strong>Documentary Stamps:</strong> $${formatNumber(docStamps)}</p>
+                        <p><strong>Title Search Fee:</strong> $${formatNumber(titleSearchFee)}</p>
+                        <p><strong>City Lien Search:</strong> $${formatNumber(cityLienSearch)}</p>
+                        <p><strong>Technology Fee:</strong> $${formatNumber(technologyFee)}</p>
+                        ${includeSurvey ? `<p><strong>Survey Fee:</strong> $${formatNumber(surveyFee)}</p>` : ''}
+                        ${includeHOA ? `<p><strong>HOA Estoppel Fee:</strong> $${formatNumber(hoaEstoppelFee)}</p>` : ''}
+                        <p><strong>Total Closing Costs:</strong> $${formatNumber(totalCost)}</p>
+                        <p><strong>Total Due to Seller:</strong> $${formatNumber(totalDueToSeller)}</p>
                     `;
                 } catch (error) {
                     document.getElementById('result').innerHTML = "<p>An error occurred: " + error.message + "</p>";
