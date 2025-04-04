@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy Closing Cost Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Easy Closing Cost Calculator</h1>
+    <label for="property_value">Enter Property Value: </label>
+    <input type="number" id="property_value" step="0.01" required><br>
+    
+    <label for="agent_commission">Agent Commission (%): </label>
+    <input type="number" id="agent_commission" step="0.01" required><br>
+    
+    <label for="tax_proration">Tax Proration (Annual Tax Amount): </label>
+    <input type="number" id="tax_proration" step="0.01" required><br>
+    
+    <label for="closing_date">Enter Closing Date: </label>
+    <input type="date" id="closing_date" required><br>
+    
+    <button id="calculateBtn">Calculate</button>
+    
+    <div class="result" id="result"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const calculateBtn = document.getElementById('calculateBtn');
+            
+            calculateBtn.addEventListener('click', function() {
+                try {
+                    // Get input values
+                    const propertyValue = parseFloat(document.getElementById('property_value').value);
+                    const agentCommission = parseFloat(document.getElementById('agent_commission').value);
+                    const taxProration = parseFloat(document.getElementById('tax_proration').value);
+                    const closingDateInput = document.getElementById('closing_date').value;
+
+                    // Validate inputs
+                    if (!propertyValue || propertyValue <= 0 || 
+                        !agentCommission || agentCommission < 0 || 
+                        !taxProration || taxProration < 0 || 
+                        !closingDateInput) {
+                        document.getElementById('result').innerHTML = "<p>Please enter valid numbers for all fields.</p>";
+                        return;
+                    }
+
+                    // Calculate prorated taxes
+                    const closingDate = new Date(closingDateInput);
+                    const yearDays = closingDate.getFullYear() % 4 === 0 ? 366 : 365;
+                    const dayOfYear = Math.ceil((closingDate - new Date(closingDate.getFullYear(), 0, 0)) / 86400000);
+                    const proratedTaxes = (taxProration / yearDays) * (yearDays - dayOfYear);
+
+                    // Calculate all costs
+                    const baseRate = 0.005; // 0.5% of property value
+                    const premium = propertyValue * baseRate;
+                    const agentCost = (agentCommission / 100) * propertyValue;
+                    const docStamps = propertyValue * 0.007;
+                    const titleSearchFee = 75;
+                    const cityLienSearch = 75;
+                    const technologyFee = 90;
+                    const closingFee = 500;
+
+                    // Calculate totals
+                    const totalCost = premium + agentCost + proratedTaxes + docStamps + 
+                                   titleSearchFee + cityLienSearch + technologyFee + closingFee;
+                    const totalDueToSeller = propertyValue - totalCost;
+
+                    // Display results
+                    document.getElementById('result').innerHTML = `
+                        <p><strong>Property Value:</strong> $${propertyValue.toFixed(2)}</p>
+                        <p><strong>Title Insurance Premium:</strong> $${premium.toFixed(2)}</p>
+                        <p><strong>Closing Fee:</strong> Approximately $500 (Varies by Buyer/Seller & Cash/Loan)</p>
+                        <p><strong>Agent Commission:</strong> $${agentCost.toFixed(2)}</p>
+                        <p><strong>Tax Proration (from closing date):</strong> $${proratedTaxes.toFixed(2)}</p>
+                        <p><strong>Documentary Stamps:</strong> $${docStamps.toFixed(2)}</p>
+                        <p><strong>Title Search Fee:</strong> $${titleSearchFee.toFixed(2)}</p>
+                        <p><strong>City Lien Search:</strong> $${cityLienSearch.toFixed(2)}</p>
+                        <p><strong>Technology Fee:</strong> $${technologyFee.toFixed(2)}</p>
+                        <p><strong>Total Estimated Closing Costs:</strong> $${totalCost.toFixed(2)}</p>
+                        <p><strong>Total Due to Seller:</strong> $${totalDueToSeller.toFixed(2)}</p>
+                    `;
+                } catch (error) {
+                    document.getElementById('result').innerHTML = "<p>An error occurred: " + error.message + "</p>";
+                }
+            });
+        });
+    </script>
+</body>
+</html>
